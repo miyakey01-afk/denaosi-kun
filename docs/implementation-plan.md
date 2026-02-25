@@ -60,7 +60,8 @@ Excelの手軽さとCRMのカレンダー機能を融合した、軽量な営業
 | **シンプル入力** | Excel感覚の簡単な入力フォーム |
 | **色分けステータス** | 案件の状態をカレンダー上で色で瞬時に把握 |
 | **ポイント集計** | 予想受注金額をポイントで管理し、月別・担当者別に自動集計 |
-| **ゼロコスト運用** | 自社ホスティングで追加費用なし |
+| **リアルタイム共有** | 複数ユーザーがリアルタイムで案件状態を共有（Firestore） |
+| **低コスト運用** | Firebase無料枠で運用可能（Firestore: 1GB/50K読取日、Hosting: 10GB/360MB日） |
 
 ---
 
@@ -72,6 +73,7 @@ Excelの手軽さとCRMのカレンダー機能を融合した、軽量な営業
 | フィールド | 型 | 必須 | 説明 |
 |-----------|-----|------|------|
 | 担当者名 | テキスト（選択式） | ○ | 営業マンの名前 |
+| 所属名 | 選択式（事前登録） | ○ | 営業マンの所属部署・支店名（管理画面で事前登録） |
 | 顧客名 | テキスト | ○ | 訪問先の顧客名 |
 | 訪問日 | 日付 | ○ | 訪問予定日 |
 | 訪問時間 | 時刻 | ○ | 訪問予定時刻 |
@@ -127,12 +129,14 @@ Excelの手軽さとCRMのカレンダー機能を融合した、軽量な営業
 | **Tailwind CSS** | ユーティリティファーストで素早くスタイリング |
 | **Recharts** | ダッシュボード用のグラフライブラリ |
 
-### 4.2 バックエンド
+### 4.2 バックエンド（Firebase）
 
 | 技術 | 理由 |
 |-----|------|
-| **JSON Server** または **localStorage** | Phase 1はシンプルにローカルストレージで開始 |
-| **将来的**: Express + SQLite | 複数ユーザー対応時にサーバーサイドへ移行 |
+| **Firebase SDK (v10+)** | Googleのマネージドサービス。セットアップが容易 |
+| **Cloud Firestore** | NoSQLデータベース。リアルタイム同期・オフライン対応 |
+| **Firebase Hosting** | React SPAホスティング。自動SSL・グローバルCDN |
+| **Firebase Authentication** | Phase 2以降のユーザー認証基盤として利用 |
 
 ### 4.3 プロジェクト構成
 
@@ -166,10 +170,13 @@ denaosi-kun/
 │   │       ├── Button.tsx
 │   │       ├── Modal.tsx
 │   │       └── Select.tsx
+│   ├── lib/
+│   │   └── firebase.ts               # Firebase初期化設定
 │   ├── hooks/
-│   │   ├── useDeals.ts               # 案件データのCRUD
+│   │   ├── useDeals.ts               # 案件データのCRUD（Firestore）
 │   │   ├── useCalendarEvents.ts       # カレンダーイベント変換
-│   │   └── useLocalStorage.ts         # ローカルストレージ管理
+│   │   ├── useFirestore.ts            # Firestore CRUD + リアルタイムリスナー
+│   │   └── useMasterData.ts           # 所属名・担当者名マスタデータ管理
 │   ├── types/
 │   │   └── index.ts                   # 型定義
 │   ├── utils/
@@ -180,6 +187,10 @@ denaosi-kun/
 │   ├── App.tsx                        # メインアプリ
 │   ├── main.tsx                       # エントリーポイント
 │   └── index.css                      # グローバルスタイル
+├── firebase.json                      # Firebase設定（Hosting/Firestore）
+├── .firebaserc                        # Firebaseプロジェクト設定
+├── .env.local                         # Firebase環境変数（APIキー等）※.gitignore対象
+├── .gitignore
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
@@ -195,8 +206,9 @@ denaosi-kun/
 
 ```typescript
 interface Deal {
-  id: string;                    // UUID
+  id: string;                    // UUID（Firestoreドキュメント ID）
   salesPerson: string;           // 担当者名
+  department: string;            // 所属名（部署・支店）
   customerName: string;          // 顧客名
   visitDate: string;             // 訪問日 (YYYY-MM-DD)
   visitTime: string;             // 訪問時間 (HH:mm)
@@ -229,7 +241,34 @@ type DealResult =
   | 'on_hold';        // 保留
 ```
 
-### 5.2 ステータス色定義
+### 5.2 Firestoreコレクション設計
+
+```
+Firestore データベース構造:
+
+deals/{dealId}                    — 案件データ（Dealインターフェースに対応）
+  ├── salesPerson: string
+  ├── department: string
+  ├── customerName: string
+  ├── visitDate: string
+  ├── visitTime: string
+  ├── property: string
+  ├── expectedPoints: number
+  ├── status: string
+  ├── settlement: string
+  ├── result: string
+  ├── memo: string
+  ├── createdAt: Timestamp
+  └── updatedAt: Timestamp
+
+master/departments                — 所属名マスタ（事前登録）
+  └── list: string[]              — 例: ["営業1課", "営業2課", "東京支店", "大阪支店"]
+
+master/salesPersons               — 担当者名マスタ（事前登録）
+  └── list: string[]              — 例: ["田中太郎", "山田花子", "佐藤次郎"]
+```
+
+### 5.3 ステータス色定義
 
 ```typescript
 const STATUS_COLORS: Record<DealStatus, string> = {
@@ -292,6 +331,7 @@ const RESULT_COLORS: Record<DealResult, string> = {
 ├──────────────────────────────────┤
 │                                  │
 │  担当者: [▼ 選択してください   ]  │
+│  所属:  [▼ 選択してください   ]  │
 │  顧客名: [                    ]  │
 │  訪問日: [📅 2026-02-25       ]  │
 │  訪問時間: [🕐 10:00          ]  │
@@ -319,16 +359,19 @@ const RESULT_COLORS: Record<DealResult, string> = {
 
 | ステップ | 内容 | 主要ファイル |
 |---------|------|-------------|
-| 1-1 | プロジェクト初期設定（Vite + React + TypeScript） | package.json, vite.config.ts |
+| 1-1 | プロジェクト初期設定（Vite + React + TypeScript + Firebase SDK） | package.json, vite.config.ts |
 | 1-2 | Tailwind CSS セットアップ | tailwind.config.js, index.css |
-| 1-3 | 型定義とデータモデル作成 | types/index.ts, utils/constants.ts |
-| 1-4 | レイアウトコンポーネント作成 | Layout/, Header.tsx, Sidebar.tsx |
-| 1-5 | 案件入力フォーム作成 | Form/DealForm.tsx, DealFormModal.tsx |
-| 1-6 | ローカルストレージによるデータ永続化 | hooks/useDeals.ts, hooks/useLocalStorage.ts |
-| 1-7 | カレンダービュー実装（FullCalendar連携） | Calendar/CalendarView.tsx, EventCard.tsx |
-| 1-8 | カレンダー上の案件カード表示 | Calendar/EventCard.tsx |
-| 1-9 | 案件の編集・削除機能 | Form/DealFormModal.tsx |
-| 1-10 | ドラッグ&ドロップで日付変更 | Calendar/CalendarView.tsx |
+| 1-3 | Firebase初期化設定 | lib/firebase.ts, .env.local |
+| 1-4 | 型定義とデータモデル作成 | types/index.ts, utils/constants.ts |
+| 1-5 | レイアウトコンポーネント作成 | Layout/, Header.tsx, Sidebar.tsx |
+| 1-6 | 案件入力フォーム作成（所属名フィールド含む） | Form/DealForm.tsx, DealFormModal.tsx |
+| 1-7 | Firestoreによるデータ永続化（CRUD + onSnapshotリアルタイム同期） | hooks/useFirestore.ts, hooks/useDeals.ts |
+| 1-8 | マスタデータ管理（所属名・担当者名の事前登録） | hooks/useMasterData.ts |
+| 1-9 | カレンダービュー実装（FullCalendar連携） | Calendar/CalendarView.tsx, EventCard.tsx |
+| 1-10 | カレンダー上の案件カード表示 | Calendar/EventCard.tsx |
+| 1-11 | 案件の編集・削除機能 | Form/DealFormModal.tsx |
+| 1-12 | ドラッグ&ドロップで日付変更 | Calendar/CalendarView.tsx |
+| 1-13 | Firebase Hosting デプロイ設定 | firebase.json, .firebaserc |
 
 ### Phase 2: 拡張機能
 
@@ -344,9 +387,9 @@ const RESULT_COLORS: Record<DealResult, string> = {
 
 | ステップ | 内容 |
 |---------|------|
-| 3-1 | バックエンドAPI（Express + SQLite） |
-| 3-2 | ユーザー認証 |
-| 3-3 | 複数ユーザー対応 |
+| 3-1 | Firebase Authentication によるユーザー認証 |
+| 3-2 | Firestoreセキュリティルール設定（認証ベースのアクセス制御） |
+| 3-3 | 複数ユーザー対応（担当者ごとの権限管理） |
 | 3-4 | 通知・リマインダー機能 |
 
 ---
@@ -379,5 +422,6 @@ const RESULT_COLORS: Record<DealResult, string> = {
 1. カレンダーで訪問予定と案件状態が一目で分かる
 2. 色分けにより案件の進捗状況を瞬時に把握
 3. ポイント集計でチーム全体の営業パフォーマンスを可視化
-4. ローカル動作で追加コスト不要
-5. 将来的にサーバーサイドへの拡張も可能
+4. Firestoreリアルタイム同期で複数ユーザーが同時利用可能
+5. Firebase無料枠で低コスト運用（Spark プラン）
+6. 所属名・担当者名のマスタデータ管理で入力の統一性を確保
