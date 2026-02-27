@@ -17,7 +17,7 @@ let db: Firestore | null = null;
 
 if (hasFirebaseConfig) {
   app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
+  db = getFirestore(app, 'denaosi-kun');
 }
 
 export { app, db, hasFirebaseConfig };
