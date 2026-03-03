@@ -48,3 +48,12 @@ export const DEFAULT_SALES_PERSONS = [
   '山田花子',
   '佐藤次郎',
 ];
+
+export const DEPARTMENT_COLORS = [
+  { row: 'bg-orange-50', header: 'bg-orange-200 text-orange-900' },
+  { row: 'bg-emerald-50', header: 'bg-emerald-200 text-emerald-900' },
+  { row: 'bg-yellow-50', header: 'bg-yellow-200 text-yellow-900' },
+  { row: 'bg-slate-100', header: 'bg-slate-300 text-slate-800' },
+  { row: 'bg-purple-50', header: 'bg-purple-200 text-purple-900' },
+  { row: 'bg-sky-50', header: 'bg-sky-200 text-sky-900' },
+];
