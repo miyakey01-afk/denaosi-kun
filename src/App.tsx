@@ -116,6 +116,7 @@ export default function App() {
           onDealClick={openEditDeal}
           onDealDrop={handleDealDrop}
           onCellClick={handleCellClick}
+          onDateChange={handleDateSelect}
         />
       )}
 
