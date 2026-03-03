@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db, hasFirebaseConfig } from '../lib/firebase';
 import { DEFAULT_DEPARTMENTS, DEFAULT_SALES_PERSONS } from '../utils/constants';
+import { STAFF_MASTER } from '../data/staffMaster';
+import type { StaffMember } from '../types';
 
 const LOCAL_DEPT_KEY = 'denaosi-departments';
 const LOCAL_SP_KEY = 'denaosi-salespersons';
@@ -16,6 +18,7 @@ function loadList(key: string, defaults: string[]): string[] {
 export function useMasterData() {
   const [departments, setDepartments] = useState<string[]>([]);
   const [salesPersons, setSalesPersons] = useState<string[]>([]);
+  const staffMembers: StaffMember[] = STAFF_MASTER;
 
   useEffect(() => {
     if (hasFirebaseConfig && db) {
@@ -52,5 +55,5 @@ export function useMasterData() {
     setSalesPersons(list);
   }, []);
 
-  return { departments, salesPersons, updateDepartments, updateSalesPersons };
+  return { departments, salesPersons, staffMembers, updateDepartments, updateSalesPersons };
 }

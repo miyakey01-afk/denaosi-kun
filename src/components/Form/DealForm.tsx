@@ -1,24 +1,37 @@
-import { useState, type FormEvent } from 'react';
-import type { Deal, DealFormData, DealStatus, Settlement, DealResult } from '../../types';
+import { useState, useMemo, type FormEvent } from 'react';
+import type { Deal, DealFormData, DealStatus, Settlement, DealResult, StaffMember } from '../../types';
 import { STATUS_LABELS, SETTLEMENT_LABELS, RESULT_LABELS } from '../../utils/constants';
-import { formatDate, formatTime } from '../../utils/helpers';
+import { formatDate } from '../../utils/helpers';
 
 interface DealFormProps {
   initialData?: Deal;
   departments: string[];
   salesPersons: string[];
+  staffMembers: StaffMember[];
   presetDepartment?: string;
   onSubmit: (data: DealFormData) => void;
   onCancel: () => void;
   onDelete?: () => void;
 }
 
+/** 30分刻みの時間帯（9:00〜18:00） */
+const TIME_SLOTS: string[] = (() => {
+  const slots: string[] = [];
+  for (let h = 9; h <= 18; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      if (h === 18 && m > 0) break;
+      slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    }
+  }
+  return slots;
+})();
+
 const EMPTY_FORM: DealFormData = {
   salesPerson: '',
   department: '',
   customerName: '',
   visitDate: formatDate(new Date()),
-  visitTime: formatTime(new Date()),
+  visitTime: '09:00',
   property: '',
   expectedPoints: 0,
   status: 'first_visit',
@@ -30,12 +43,14 @@ const EMPTY_FORM: DealFormData = {
 export default function DealForm({
   initialData,
   departments,
-  salesPersons,
+  salesPersons: _salesPersons,
+  staffMembers,
   presetDepartment,
   onSubmit,
   onCancel,
   onDelete,
 }: DealFormProps) {
+  void _salesPersons;
   const [form, setForm] = useState<DealFormData>(
     initialData
       ? {
@@ -57,8 +72,46 @@ export default function DealForm({
         }
   );
 
+  // Whether user is entering a name manually (not in master)
+  const [manualInput, setManualInput] = useState(false);
+
+  // Build a map: name → department for quick lookup
+  const staffMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of staffMembers) map.set(s.name, s.department);
+    return map;
+  }, [staffMembers]);
+
+  // Group staff by department for the dropdown
+  const staffByDept = useMemo(() => {
+    const map = new Map<string, StaffMember[]>();
+    for (const s of staffMembers) {
+      const list = map.get(s.department) || [];
+      list.push(s);
+      map.set(s.department, list);
+    }
+    return map;
+  }, [staffMembers]);
+
   const handleChange = (field: keyof DealFormData, value: string | number) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleNameSelect = (name: string) => {
+    if (name === '__manual__') {
+      setManualInput(true);
+      setForm((prev) => ({ ...prev, salesPerson: '' }));
+      return;
+    }
+    setManualInput(false);
+    setForm((prev) => {
+      const dept = staffMap.get(name);
+      return {
+        ...prev,
+        salesPerson: name,
+        department: dept || prev.department,
+      };
+    });
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -66,27 +119,64 @@ export default function DealForm({
     onSubmit(form);
   };
 
+  // Check if current salesPerson is in the staff master
+  const isKnownStaff = staffMap.has(form.salesPerson);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* 担当者 */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">担当者 *</label>
-        <select
-          value={form.salesPerson}
-          onChange={(e) => handleChange('salesPerson', e.target.value)}
-          required
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        >
-          <option value="">選択してください</option>
-          {salesPersons.map((sp) => (
-            <option key={sp} value={sp}>{sp}</option>
-          ))}
-        </select>
+        {manualInput ? (
+          <div className="space-y-1">
+            <input
+              type="text"
+              value={form.salesPerson}
+              onChange={(e) => handleChange('salesPerson', e.target.value)}
+              placeholder="氏名を入力"
+              required
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <button
+              type="button"
+              onClick={() => setManualInput(false)}
+              className="text-xs text-blue-600 hover:text-blue-800"
+            >
+              一覧から選択
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <select
+              value={isKnownStaff || !form.salesPerson ? form.salesPerson : '__manual__'}
+              onChange={(e) => handleNameSelect(e.target.value)}
+              required
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">選択してください</option>
+              {[...staffByDept.entries()].map(([dept, members]) => (
+                <optgroup key={dept} label={dept}>
+                  {members.map((s) => (
+                    <option key={s.employeeId} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+              <option value="__manual__">-- その他（手入力）--</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* 所属 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">所属 *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          所属課 *
+          {isKnownStaff && (
+            <span className="ml-2 text-xs text-green-600 font-normal">自動反映済</span>
+          )}
+        </label>
         <select
           value={form.department}
           onChange={(e) => handleChange('department', e.target.value)}
@@ -126,13 +216,16 @@ export default function DealForm({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">訪問時間 *</label>
-          <input
-            type="time"
+          <select
             value={form.visitTime}
             onChange={(e) => handleChange('visitTime', e.target.value)}
             required
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+          >
+            {TIME_SLOTS.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
         </div>
       </div>
 

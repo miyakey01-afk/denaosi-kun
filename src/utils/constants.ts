@@ -36,18 +36,7 @@ export const RESULT_LABELS: Record<DealResult, string> = {
   on_hold: '保留',
 };
 
-export const DEFAULT_DEPARTMENTS = [
-  '営業1課',
-  '営業2課',
-  '東京支店',
-  '大阪支店',
-];
-
-export const DEFAULT_SALES_PERSONS = [
-  '田中太郎',
-  '山田花子',
-  '佐藤次郎',
-];
+export { STAFF_DEPARTMENTS as DEFAULT_DEPARTMENTS, STAFF_NAMES as DEFAULT_SALES_PERSONS } from '../data/staffMaster';
 
 export const DEPARTMENT_COLORS = [
   { row: 'bg-orange-50', header: 'bg-orange-200 text-orange-900' },

@@ -10,7 +10,7 @@ import DealFormModal from './components/Form/DealFormModal';
 
 export default function App() {
   const { deals, loading, addDeal, updateDeal, deleteDeal } = useDeals();
-  const { departments, salesPersons, updateDepartments } = useMasterData();
+  const { departments, salesPersons, staffMembers, updateDepartments } = useMasterData();
 
   const [currentView, setCurrentView] = useState<ViewMode>('calendar');
   const [modalOpen, setModalOpen] = useState(false);
@@ -137,6 +137,7 @@ export default function App() {
         deal={editingDeal}
         departments={departments}
         salesPersons={salesPersons}
+        staffMembers={staffMembers}
         presetDepartment={presetDepartment}
         onClose={() => setModalOpen(false)}
         onSubmit={handleSubmit}
