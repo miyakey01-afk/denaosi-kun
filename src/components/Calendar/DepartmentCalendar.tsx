@@ -21,11 +21,15 @@ function formatDateStr(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-function getDaysInMonth(year: number, month: number): Date[] {
+function getWeekdaysInMonth(year: number, month: number): Date[] {
   const days: Date[] = [];
   const count = new Date(year, month + 1, 0).getDate();
   for (let d = 1; d <= count; d++) {
-    days.push(new Date(year, month, d));
+    const date = new Date(year, month, d);
+    const dow = date.getDay();
+    if (dow !== 0 && dow !== 6) {
+      days.push(date);
+    }
   }
   return days;
 }
@@ -96,7 +100,7 @@ export default function DepartmentCalendar({
 
   const year = selectedDate.getFullYear();
   const month = selectedDate.getMonth();
-  const days = useMemo(() => getDaysInMonth(year, month), [year, month]);
+  const days = useMemo(() => getWeekdaysInMonth(year, month), [year, month]);
 
   const dealMap = useMemo(() => {
     const map = new Map<string, Deal[]>();
@@ -170,35 +174,22 @@ export default function DepartmentCalendar({
             {days.map((day) => {
               const dateStr = formatDateStr(day);
               const weekday = WEEKDAY_NAMES[day.getDay()];
-              const isWeekend = day.getDay() === 0 || day.getDay() === 6;
               const isTodayRow = dateStr === todayStr;
 
               return (
                 <tr
                   key={dateStr}
-                  className={
-                    isTodayRow
-                      ? 'bg-blue-50/60'
-                      : isWeekend
-                      ? 'bg-gray-50/40'
-                      : ''
-                  }
+                  className={isTodayRow ? 'bg-blue-50/60' : ''}
                 >
                   <td
                     className={`border border-gray-200 px-3 py-2 text-sm font-medium whitespace-nowrap sticky left-0 z-[5] ${
                       isTodayRow
                         ? 'bg-blue-50 text-blue-700 font-bold'
-                        : isWeekend
-                        ? 'bg-gray-50 text-red-500'
                         : 'bg-white text-gray-700'
                     }`}
                   >
                     <div>{day.getDate()}</div>
-                    <div
-                      className={`text-[10px] ${
-                        isWeekend ? 'text-red-400' : 'text-gray-400'
-                      }`}
-                    >
+                    <div className="text-[10px] text-gray-400">
                       ({weekday})
                     </div>
                   </td>
