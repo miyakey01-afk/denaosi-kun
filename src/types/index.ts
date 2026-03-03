@@ -16,6 +16,12 @@ export type DealResult =
   | 'lost'
   | 'on_hold';
 
+export interface StaffMember {
+  employeeId: number;
+  name: string;
+  department: string;
+}
+
 export interface Deal {
   id: string;
   salesPerson: string;

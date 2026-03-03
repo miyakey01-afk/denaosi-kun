@@ -1,4 +1,4 @@
-import type { Deal, DealFormData } from '../../types';
+import type { Deal, DealFormData, StaffMember } from '../../types';
 import Modal from '../common/Modal';
 import DealForm from './DealForm';
 
@@ -7,6 +7,7 @@ interface DealFormModalProps {
   deal?: Deal;
   departments: string[];
   salesPersons: string[];
+  staffMembers: StaffMember[];
   presetDepartment?: string;
   onClose: () => void;
   onSubmit: (data: DealFormData) => void;
@@ -18,6 +19,7 @@ export default function DealFormModal({
   deal,
   departments,
   salesPersons,
+  staffMembers,
   presetDepartment,
   onClose,
   onSubmit,
@@ -33,6 +35,7 @@ export default function DealFormModal({
         initialData={deal}
         departments={departments}
         salesPersons={salesPersons}
+        staffMembers={staffMembers}
         presetDepartment={presetDepartment}
         onSubmit={(data) => {
           onSubmit(data);
