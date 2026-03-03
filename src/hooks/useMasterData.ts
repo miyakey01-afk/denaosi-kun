@@ -5,8 +5,29 @@ import { DEFAULT_DEPARTMENTS, DEFAULT_SALES_PERSONS } from '../utils/constants';
 import { STAFF_MASTER } from '../data/staffMaster';
 import type { StaffMember } from '../types';
 
-const LOCAL_DEPT_KEY = 'denaosi-departments';
-const LOCAL_SP_KEY = 'denaosi-salespersons';
+// v2 keys — old 'denaosi-departments' / 'denaosi-salespersons' are ignored
+const LOCAL_DEPT_KEY = 'denaosi-departments-v2';
+const LOCAL_SP_KEY = 'denaosi-salespersons-v2';
+const MASTER_VERSION_KEY = 'denaosi-master-version';
+const CURRENT_MASTER_VERSION = '2026-03'; // マスター更新時にバージョンを上げる
+
+function migrate() {
+  // Remove old keys so stale demo data doesn't linger
+  localStorage.removeItem('denaosi-departments');
+  localStorage.removeItem('denaosi-salespersons');
+}
+
+/** マスターバージョンが変わったら localStorage / Firebase を強制リセットする */
+function needsReset(): boolean {
+  const stored = localStorage.getItem(MASTER_VERSION_KEY);
+  if (stored !== CURRENT_MASTER_VERSION) {
+    localStorage.setItem(MASTER_VERSION_KEY, CURRENT_MASTER_VERSION);
+    localStorage.removeItem(LOCAL_DEPT_KEY);
+    localStorage.removeItem(LOCAL_SP_KEY);
+    return true;
+  }
+  return false;
+}
 
 function loadList(key: string, defaults: string[]): string[] {
   const raw = localStorage.getItem(key);
@@ -21,7 +42,15 @@ export function useMasterData() {
   const staffMembers: StaffMember[] = STAFF_MASTER;
 
   useEffect(() => {
+    migrate();
+    const reset = needsReset();
+
     if (hasFirebaseConfig && db) {
+      if (reset) {
+        // マスター更新: Firebase 上の古いデータを新マスターで上書き
+        setDoc(doc(db, 'master', 'departments'), { list: DEFAULT_DEPARTMENTS });
+        setDoc(doc(db, 'master', 'salesPersons'), { list: DEFAULT_SALES_PERSONS });
+      }
       const unsubDept = onSnapshot(doc(db, 'master', 'departments'), (snap) => {
         const data = snap.data();
         setDepartments(data?.list ?? DEFAULT_DEPARTMENTS);
