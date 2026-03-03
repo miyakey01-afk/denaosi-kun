@@ -21,6 +21,7 @@ interface DepartmentCalendarProps {
 const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
 const SUB_COLS = ['担当者', '時間', '客先', '物件', 'Pt', '状態', '決済', '結果'];
 const SUB_COL_COUNT = SUB_COLS.length;
+const SUMMARY_COLS = ['件数', 'Pt計'];
 const MIN_ROWS = 3;
 
 function fmt(date: Date): string {
@@ -95,6 +96,21 @@ export default function DepartmentCalendar({
       counts.set(dept, Math.max(max, MIN_ROWS));
     }
     return counts;
+  }, [grid]);
+
+  // Weekly summary per department: { count, totalPt }
+  const weeklySummary = useMemo(() => {
+    const summary = new Map<string, { count: number; totalPt: number }>();
+    for (const [dept, dm] of grid) {
+      let count = 0;
+      let totalPt = 0;
+      for (const [, list] of dm) {
+        count += list.length;
+        for (const deal of list) totalPt += deal.expectedPoints;
+      }
+      summary.set(dept, { count, totalPt });
+    }
+    return summary;
   }, [grid]);
 
   const prevWeek = () => {
@@ -193,6 +209,12 @@ export default function DepartmentCalendar({
                   </th>
                 );
               })}
+              <th
+                colSpan={SUMMARY_COLS.length}
+                className="border border-gray-300 px-1 py-1.5 text-xs font-bold whitespace-nowrap bg-indigo-100 text-indigo-800"
+              >
+                週計
+              </th>
             </tr>
             {/* Row 2: Sub-column headers */}
             <tr>
@@ -212,6 +234,14 @@ export default function DepartmentCalendar({
                   </th>
                 ));
               })}
+              {SUMMARY_COLS.map((col) => (
+                <th
+                  key={`summary-${col}`}
+                  className="border border-gray-200 px-1 py-1 font-semibold whitespace-nowrap bg-indigo-50 text-indigo-600"
+                >
+                  {col}
+                </th>
+              ))}
             </tr>
           </thead>
 
@@ -221,6 +251,8 @@ export default function DepartmentCalendar({
               const ci = deptIdx % DEPARTMENT_COLORS.length;
               const colors = DEPARTMENT_COLORS[ci];
               const dm = grid.get(dept);
+
+              const deptSummary = weeklySummary.get(dept) || { count: 0, totalPt: 0 };
 
               return Array.from({ length: rc }, (_, ri) => (
                 <tr
@@ -324,6 +356,24 @@ export default function DepartmentCalendar({
                       </Fragment>
                     );
                   })}
+
+                  {/* Weekly summary (first row only) */}
+                  {ri === 0 && (
+                    <>
+                      <td
+                        rowSpan={rc}
+                        className="border border-gray-200 px-2 py-1 text-center font-bold text-indigo-700 bg-indigo-50/60"
+                      >
+                        {deptSummary.count}
+                      </td>
+                      <td
+                        rowSpan={rc}
+                        className="border border-gray-200 px-2 py-1 text-right font-bold text-indigo-700 bg-indigo-50/60"
+                      >
+                        {deptSummary.totalPt}
+                      </td>
+                    </>
+                  )}
                 </tr>
               ));
             })}

@@ -10,7 +10,7 @@ import DealFormModal from './components/Form/DealFormModal';
 
 export default function App() {
   const { deals, loading, addDeal, updateDeal, deleteDeal } = useDeals();
-  const { departments, salesPersons } = useMasterData();
+  const { departments, salesPersons, updateDepartments } = useMasterData();
 
   const [currentView, setCurrentView] = useState<ViewMode>('calendar');
   const [modalOpen, setModalOpen] = useState(false);
@@ -104,6 +104,7 @@ export default function App() {
       selectedDepartments={selectedDepartments}
       onDepartmentToggle={handleDepartmentToggle}
       onDepartmentSelectAll={handleDepartmentSelectAll}
+      onDepartmentsUpdate={updateDepartments}
       selectedDate={selectedDate}
       onDateSelect={handleDateSelect}
     >
