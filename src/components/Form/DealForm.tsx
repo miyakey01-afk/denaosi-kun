@@ -7,6 +7,7 @@ interface DealFormProps {
   initialData?: Deal;
   departments: string[];
   salesPersons: string[];
+  presetDepartment?: string;
   onSubmit: (data: DealFormData) => void;
   onCancel: () => void;
   onDelete?: () => void;
@@ -30,6 +31,7 @@ export default function DealForm({
   initialData,
   departments,
   salesPersons,
+  presetDepartment,
   onSubmit,
   onCancel,
   onDelete,
@@ -49,7 +51,10 @@ export default function DealForm({
           result: initialData.result,
           memo: initialData.memo,
         }
-      : EMPTY_FORM
+      : {
+          ...EMPTY_FORM,
+          department: presetDepartment || '',
+        }
   );
 
   const handleChange = (field: keyof DealFormData, value: string | number) => {
