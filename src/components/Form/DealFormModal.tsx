@@ -7,6 +7,7 @@ interface DealFormModalProps {
   deal?: Deal;
   departments: string[];
   salesPersons: string[];
+  presetDepartment?: string;
   onClose: () => void;
   onSubmit: (data: DealFormData) => void;
   onDelete?: (id: string) => void;
@@ -17,6 +18,7 @@ export default function DealFormModal({
   deal,
   departments,
   salesPersons,
+  presetDepartment,
   onClose,
   onSubmit,
   onDelete,
@@ -31,6 +33,7 @@ export default function DealFormModal({
         initialData={deal}
         departments={departments}
         salesPersons={salesPersons}
+        presetDepartment={presetDepartment}
         onSubmit={(data) => {
           onSubmit(data);
           onClose();

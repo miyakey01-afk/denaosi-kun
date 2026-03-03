@@ -2,9 +2,8 @@ import { useState, useCallback } from 'react';
 import type { Deal, DealFormData, ViewMode } from './types';
 import { useDeals } from './hooks/useDeals';
 import { useMasterData } from './hooks/useMasterData';
-import { useCalendarEvents } from './hooks/useCalendarEvents';
 import Layout from './components/Layout/Layout';
-import CalendarView from './components/Calendar/CalendarView';
+import DepartmentCalendar from './components/Calendar/DepartmentCalendar';
 import DealList from './components/List/DealList';
 import Dashboard from './components/Dashboard/Dashboard';
 import DealFormModal from './components/Form/DealFormModal';
@@ -12,18 +11,23 @@ import DealFormModal from './components/Form/DealFormModal';
 export default function App() {
   const { deals, loading, addDeal, updateDeal, deleteDeal } = useDeals();
   const { departments, salesPersons } = useMasterData();
-  const events = useCalendarEvents(deals);
 
   const [currentView, setCurrentView] = useState<ViewMode>('calendar');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | undefined>();
   const [presetDate, setPresetDate] = useState<string>('');
   const [presetTime, setPresetTime] = useState<string>('');
+  const [presetDepartment, setPresetDepartment] = useState<string>('');
+
+  // Department filter & date selection
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
 
   const openNewDeal = useCallback(() => {
     setEditingDeal(undefined);
     setPresetDate('');
     setPresetTime('');
+    setPresetDepartment('');
     setModalOpen(true);
   }, []);
 
@@ -32,10 +36,11 @@ export default function App() {
     setModalOpen(true);
   }, []);
 
-  const handleDateSelect = useCallback((date: string, time: string) => {
+  const handleCellClick = useCallback((date: string, department: string) => {
     setEditingDeal(undefined);
     setPresetDate(date);
-    setPresetTime(time);
+    setPresetTime('09:00');
+    setPresetDepartment(department);
     setModalOpen(true);
   }, []);
 
@@ -46,17 +51,41 @@ export default function App() {
       const formData = { ...data };
       if (presetDate) formData.visitDate = presetDate;
       if (presetTime) formData.visitTime = presetTime;
+      if (presetDepartment) formData.department = presetDepartment;
       await addDeal(formData);
     }
-  }, [editingDeal, presetDate, presetTime, addDeal, updateDeal]);
+  }, [editingDeal, presetDate, presetTime, presetDepartment, addDeal, updateDeal]);
 
-  const handleEventDrop = useCallback(async (dealId: string, newDate: string) => {
-    await updateDeal(dealId, { visitDate: newDate });
+  const handleDealDrop = useCallback(async (dealId: string, newDate: string, newDepartment: string) => {
+    await updateDeal(dealId, { visitDate: newDate, department: newDepartment });
   }, [updateDeal]);
 
   const handleDelete = useCallback(async (id: string) => {
     await deleteDeal(id);
   }, [deleteDeal]);
+
+  const handleDepartmentToggle = useCallback((dept: string) => {
+    setSelectedDepartments((prev) => {
+      if (prev.length === 0) {
+        // Currently showing all -> select only this one
+        return [dept];
+      }
+      if (prev.includes(dept)) {
+        // Deselect
+        return prev.filter((d) => d !== dept);
+      }
+      // Add to selection
+      return [...prev, dept];
+    });
+  }, []);
+
+  const handleDepartmentSelectAll = useCallback(() => {
+    setSelectedDepartments([]);
+  }, []);
+
+  const handleDateSelect = useCallback((date: Date) => {
+    setSelectedDate(date);
+  }, []);
 
   if (loading) {
     return (
@@ -71,13 +100,22 @@ export default function App() {
       currentView={currentView}
       onViewChange={setCurrentView}
       onNewDeal={openNewDeal}
+      departments={departments}
+      selectedDepartments={selectedDepartments}
+      onDepartmentToggle={handleDepartmentToggle}
+      onDepartmentSelectAll={handleDepartmentSelectAll}
+      selectedDate={selectedDate}
+      onDateSelect={handleDateSelect}
     >
       {currentView === 'calendar' && (
-        <CalendarView
-          events={events}
-          onEventClick={openEditDeal}
-          onEventDrop={handleEventDrop}
-          onDateSelect={handleDateSelect}
+        <DepartmentCalendar
+          deals={deals}
+          departments={departments}
+          selectedDepartments={selectedDepartments}
+          selectedDate={selectedDate}
+          onDealClick={openEditDeal}
+          onDealDrop={handleDealDrop}
+          onCellClick={handleCellClick}
         />
       )}
 
@@ -97,6 +135,7 @@ export default function App() {
         deal={editingDeal}
         departments={departments}
         salesPersons={salesPersons}
+        presetDepartment={presetDepartment}
         onClose={() => setModalOpen(false)}
         onSubmit={handleSubmit}
         onDelete={handleDelete}
