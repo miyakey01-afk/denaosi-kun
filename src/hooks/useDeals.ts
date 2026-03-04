@@ -33,11 +33,19 @@ export function useDeals() {
   // Firestore realtime listener or localStorage
   useEffect(() => {
     if (hasFirebaseConfig && db) {
-      const unsub = onSnapshot(collection(db, 'deals'), (snapshot) => {
-        const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Deal));
-        setDeals(data);
-        setLoading(false);
-      });
+      const unsub = onSnapshot(
+        collection(db, 'deals'),
+        (snapshot) => {
+          const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Deal));
+          setDeals(data);
+          setLoading(false);
+        },
+        (error) => {
+          console.error('Firestore リスナーエラー:', error);
+          alert('データの取得に失敗しました。ページを再読み込みしてください。');
+          setLoading(false);
+        },
+      );
       return unsub;
     } else {
       setDeals(loadLocal());
@@ -48,11 +56,16 @@ export function useDeals() {
   const addDeal = useCallback(async (formData: DealFormData) => {
     const now = nowISO();
     if (hasFirebaseConfig && db) {
-      await addDoc(collection(db, 'deals'), {
-        ...formData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      try {
+        await addDoc(collection(db, 'deals'), {
+          ...formData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (error) {
+        console.error('案件追加エラー:', error);
+        alert('案件の保存に失敗しました。通信環境を確認してください。');
+      }
     } else {
       const newDeal: Deal = {
         ...formData,
@@ -70,10 +83,15 @@ export function useDeals() {
 
   const updateDeal = useCallback(async (id: string, updates: Partial<DealFormData>) => {
     if (hasFirebaseConfig && db) {
-      await updateDoc(doc(db, 'deals', id), {
-        ...updates,
-        updatedAt: serverTimestamp(),
-      });
+      try {
+        await updateDoc(doc(db, 'deals', id), {
+          ...updates,
+          updatedAt: serverTimestamp(),
+        });
+      } catch (error) {
+        console.error('案件更新エラー:', error);
+        alert('案件の更新に失敗しました。通信環境を確認してください。');
+      }
     } else {
       setDeals((prev) => {
         const next = prev.map((d) =>
@@ -87,7 +105,12 @@ export function useDeals() {
 
   const deleteDeal = useCallback(async (id: string) => {
     if (hasFirebaseConfig && db) {
-      await deleteDoc(doc(db, 'deals', id));
+      try {
+        await deleteDoc(doc(db, 'deals', id));
+      } catch (error) {
+        console.error('案件削除エラー:', error);
+        alert('案件の削除に失敗しました。通信環境を確認してください。');
+      }
     } else {
       setDeals((prev) => {
         const next = prev.filter((d) => d.id !== id);

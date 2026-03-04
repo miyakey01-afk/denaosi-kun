@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 案件データ: 全ユーザーに読み書きを許可
+    match /deals/{dealId} {
+      allow read, write: if true;
+    }
+    // マスターデータ: 全ユーザーに読み書きを許可
+    match /master/{docId} {
+      allow read, write: if true;
+    }
+  }
+}
