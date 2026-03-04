@@ -19,9 +19,28 @@ interface DepartmentCalendarProps {
 }
 
 const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
-const SUB_COLS = ['担当者', '時間', '客先', '物件', 'Pt', '状態', '決済', '結果'];
-const SUB_COL_COUNT = SUB_COLS.length;
-const SUMMARY_COLS = ['件数', 'Pt計'];
+
+/**
+ * 列幅仕様（px）
+ * 全角1文字 ≈ 11px, 半角1文字 ≈ 6px  + padding 12px(px-1.5×2)
+ */
+const SUB_COL_SPECS = [
+  { label: '担当者', w: 56, wrap: false },  // 全角4文字
+  { label: '時間',   w: 42, wrap: false },  // 半角5文字 (12:00)
+  { label: '客先',   w: 144, wrap: true },  // 全角12文字
+  { label: '物件',   w: 68, wrap: true },   // 全角5文字
+  { label: 'Pt',     w: 30, wrap: false },  // 半角3文字
+  { label: '状態',   w: 56, wrap: true },   // 全角4文字
+  { label: '決済',   w: 56, wrap: true },   // 全角4文字
+  { label: '結果',   w: 56, wrap: true },   // 全角4文字
+];
+const SUB_COL_COUNT = SUB_COL_SPECS.length;
+const DAY_WIDTH = SUB_COL_SPECS.reduce((s, c) => s + c.w, 0); // 1日分の幅
+const SUMMARY_COLS = [
+  { label: '件数', w: 36 },
+  { label: 'Pt計', w: 40 },
+];
+const DEPT_COL_W = 72;
 const MIN_ROWS = 3;
 
 function fmt(date: Date): string {
@@ -43,6 +62,11 @@ function getWeekdays(base: Date): Date[] {
     days.push(dt);
   }
   return days;
+}
+
+/** style helper for fixed-width columns */
+function colStyle(w: number) {
+  return { width: w, minWidth: w, maxWidth: w } as const;
 }
 
 export default function DepartmentCalendar({
@@ -149,6 +173,10 @@ export default function DepartmentCalendar({
     ? `${w0.getFullYear()}年 ${w0.getMonth() + 1}/${w0.getDate()} 〜 ${w4.getMonth() + 1}/${w4.getDate()}`
     : '';
 
+  // Total table width
+  const summaryW = SUMMARY_COLS.reduce((s, c) => s + c.w, 0);
+  const tableWidth = DEPT_COL_W + DAY_WIDTH * 5 + summaryW;
+
   return (
     <div className="bg-white rounded-lg shadow">
       {/* Week navigation */}
@@ -179,15 +207,19 @@ export default function DepartmentCalendar({
         </p>
       </div>
 
-      {/* Spreadsheet */}
-      <div className="overflow-auto">
-        <table className="border-collapse text-[11px] leading-tight">
+      {/* Spreadsheet — horizontal scroll */}
+      <div className="overflow-x-auto overflow-y-auto">
+        <table
+          className="border-collapse text-[11px] leading-tight table-fixed"
+          style={{ width: tableWidth }}
+        >
           <thead className="sticky top-0 z-20">
             {/* Row 1: Day headers */}
             <tr>
               <th
                 rowSpan={2}
-                className="border border-gray-300 px-2 py-2 text-xs font-bold text-gray-700 bg-gray-100 sticky left-0 z-30 min-w-[72px]"
+                style={colStyle(DEPT_COL_W)}
+                className="border border-gray-300 px-2 py-2 text-xs font-bold text-gray-700 bg-gray-100 sticky left-0 z-30"
               >
                 課
               </th>
@@ -198,6 +230,7 @@ export default function DepartmentCalendar({
                   <th
                     key={ds}
                     colSpan={SUB_COL_COUNT}
+                    style={colStyle(DAY_WIDTH)}
                     className={`border border-gray-300 px-1 py-1.5 text-xs font-bold whitespace-nowrap ${
                       isToday
                         ? 'bg-blue-100 text-blue-800'
@@ -211,6 +244,7 @@ export default function DepartmentCalendar({
               })}
               <th
                 colSpan={SUMMARY_COLS.length}
+                style={colStyle(summaryW)}
                 className="border border-gray-300 px-1 py-1.5 text-xs font-bold whitespace-nowrap bg-indigo-100 text-indigo-800"
               >
                 週計
@@ -221,25 +255,27 @@ export default function DepartmentCalendar({
               {weekdays.map((day) => {
                 const ds = fmt(day);
                 const isToday = ds === todayStr;
-                return SUB_COLS.map((col) => (
+                return SUB_COL_SPECS.map((col) => (
                   <th
-                    key={`${ds}-${col}`}
+                    key={`${ds}-${col.label}`}
+                    style={colStyle(col.w)}
                     className={`border border-gray-200 px-1 py-1 font-semibold whitespace-nowrap ${
                       isToday
                         ? 'bg-blue-50 text-blue-600'
                         : 'bg-gray-50 text-gray-500'
                     }`}
                   >
-                    {col}
+                    {col.label}
                   </th>
                 ));
               })}
               {SUMMARY_COLS.map((col) => (
                 <th
-                  key={`summary-${col}`}
+                  key={`summary-${col.label}`}
+                  style={colStyle(col.w)}
                   className="border border-gray-200 px-1 py-1 font-semibold whitespace-nowrap bg-indigo-50 text-indigo-600"
                 >
-                  {col}
+                  {col.label}
                 </th>
               ))}
             </tr>
@@ -265,6 +301,7 @@ export default function DepartmentCalendar({
                   {ri === 0 && (
                     <td
                       rowSpan={rc}
+                      style={colStyle(DEPT_COL_W)}
                       className={`border border-gray-300 px-2 py-1 text-xs font-bold text-center sticky left-0 z-10 whitespace-nowrap ${colors.header}`}
                     >
                       {dept}
@@ -282,49 +319,42 @@ export default function DepartmentCalendar({
                     const todayBg = isToday ? 'bg-blue-50/40' : '';
 
                     if (deal) {
-                      const cellClass = `border border-gray-200 px-1.5 py-0.5 cursor-pointer hover:bg-white/60 ${todayBg}`;
+                      const values = [
+                        deal.salesPerson,
+                        deal.visitTime,
+                        deal.customerName,
+                        deal.property,
+                        String(deal.expectedPoints),
+                        STATUS_LABELS[deal.status],
+                        SETTLEMENT_LABELS[deal.settlement],
+                        RESULT_LABELS[deal.result],
+                      ];
                       return (
                         <Fragment key={ds}>
-                          <td
-                            className={`${cellClass} font-semibold cursor-grab`}
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData('text/plain', deal.id);
-                              e.dataTransfer.effectAllowed = 'move';
-                              (e.target as HTMLElement).closest('tr')!.style.opacity = '0.4';
-                            }}
-                            onDragEnd={(e) => {
-                              const tr = (e.target as HTMLElement).closest('tr');
-                              if (tr) tr.style.opacity = '1';
-                            }}
-                            onClick={() => onDealClick(deal)}
-                          >
-                            {deal.salesPerson}
-                          </td>
-                          <td className={cellClass} onClick={() => onDealClick(deal)}>
-                            {deal.visitTime}
-                          </td>
-                          <td className={cellClass} onClick={() => onDealClick(deal)}>
-                            {deal.customerName}
-                          </td>
-                          <td className={cellClass} onClick={() => onDealClick(deal)}>
-                            {deal.property}
-                          </td>
-                          <td
-                            className={`${cellClass} text-right`}
-                            onClick={() => onDealClick(deal)}
-                          >
-                            {deal.expectedPoints}
-                          </td>
-                          <td className={cellClass} onClick={() => onDealClick(deal)}>
-                            {STATUS_LABELS[deal.status]}
-                          </td>
-                          <td className={cellClass} onClick={() => onDealClick(deal)}>
-                            {SETTLEMENT_LABELS[deal.settlement]}
-                          </td>
-                          <td className={cellClass} onClick={() => onDealClick(deal)}>
-                            {RESULT_LABELS[deal.result]}
-                          </td>
+                          {SUB_COL_SPECS.map((col, ci) => (
+                            <td
+                              key={ci}
+                              style={colStyle(col.w)}
+                              className={`border border-gray-200 px-1.5 py-0.5 cursor-pointer hover:bg-white/60 ${todayBg} ${
+                                ci === 0 ? 'font-semibold cursor-grab' : ''
+                              } ${ci === 4 ? 'text-right' : ''} ${
+                                col.wrap ? 'break-all' : 'whitespace-nowrap overflow-hidden text-ellipsis'
+                              }`}
+                              draggable={ci === 0}
+                              onDragStart={ci === 0 ? (e) => {
+                                e.dataTransfer.setData('text/plain', deal.id);
+                                e.dataTransfer.effectAllowed = 'move';
+                                (e.target as HTMLElement).closest('tr')!.style.opacity = '0.4';
+                              } : undefined}
+                              onDragEnd={ci === 0 ? (e) => {
+                                const tr = (e.target as HTMLElement).closest('tr');
+                                if (tr) tr.style.opacity = '1';
+                              } : undefined}
+                              onClick={() => onDealClick(deal)}
+                            >
+                              {values[ci]}
+                            </td>
+                          ))}
                         </Fragment>
                       );
                     }
@@ -335,9 +365,10 @@ export default function DepartmentCalendar({
                     }`;
                     return (
                       <Fragment key={ds}>
-                        {Array.from({ length: SUB_COL_COUNT }, (_, i) => (
+                        {SUB_COL_SPECS.map((col, i) => (
                           <td
                             key={i}
+                            style={colStyle(col.w)}
                             className={`${emptyClass} ${
                               i === 0 ? 'cursor-pointer hover:bg-blue-100/40' : ''
                             }`}
@@ -362,12 +393,14 @@ export default function DepartmentCalendar({
                     <>
                       <td
                         rowSpan={rc}
+                        style={colStyle(SUMMARY_COLS[0].w)}
                         className="border border-gray-200 px-2 py-1 text-center font-bold text-indigo-700 bg-indigo-50/60"
                       >
                         {deptSummary.count}
                       </td>
                       <td
                         rowSpan={rc}
+                        style={colStyle(SUMMARY_COLS[1].w)}
                         className="border border-gray-200 px-2 py-1 text-right font-bold text-indigo-700 bg-indigo-50/60"
                       >
                         {deptSummary.totalPt}
