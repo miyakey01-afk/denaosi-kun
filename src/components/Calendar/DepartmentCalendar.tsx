@@ -29,7 +29,7 @@ const SUB_COL_SPECS = [
   { label: '時間',   w: 42, wrap: false },  // 半角5文字 (12:00)
   { label: '客先',   w: 144, wrap: true },  // 全角12文字
   { label: '物件',   w: 68, wrap: true },   // 全角5文字
-  { label: 'Pt',     w: 30, wrap: false },  // 半角3文字
+  { label: 'Pt',     w: 36, wrap: false },  // 半角4文字
   { label: '状態',   w: 56, wrap: true },   // 全角4文字
   { label: '決済',   w: 56, wrap: true },   // 全角4文字
   { label: '結果',   w: 56, wrap: true },   // 全角4文字
