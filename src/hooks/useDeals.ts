@@ -73,34 +73,38 @@ export function useDeals() {
 
   // Firestore realtime listener or localStorage
   useEffect(() => {
+    console.log('[useDeals] hasFirebaseConfig:', hasFirebaseConfig, 'db:', !!db);
+
     if (hasFirebaseConfig && db) {
       // 初回のみ: localStorage → Firestore 移行を試行
-      if (!migrationAttempted.current && localStorage.getItem(MIGRATED_KEY) !== 'true') {
+      const alreadyMigrated = localStorage.getItem(MIGRATED_KEY) === 'true';
+      console.log('[useDeals] 移行済み:', alreadyMigrated, '移行試行済み:', migrationAttempted.current);
+
+      if (!migrationAttempted.current && !alreadyMigrated) {
         migrationAttempted.current = true;
         migrateLocalToFirestore().then((count) => {
-          if (count > 0) {
-            console.log(`${count} 件の案件を Firestore に移行完了`);
-          }
+          console.log(`[useDeals] 移行結果: ${count} 件`);
         }).catch((err) => {
-          console.error('Firestore 移行エラー:', err);
+          console.error('[useDeals] Firestore 移行エラー:', err);
         });
       }
 
       const unsub = onSnapshot(
         collection(db, 'deals'),
         (snapshot) => {
+          console.log('[useDeals] onSnapshot: ドキュメント数 =', snapshot.docs.length);
           const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Deal));
           setDeals(data);
           setLoading(false);
         },
         (error) => {
-          console.error('Firestore リスナーエラー:', error);
-          alert('データの取得に失敗しました。ページを再読み込みしてください。');
+          console.error('[useDeals] Firestore リスナーエラー:', error);
           setLoading(false);
         },
       );
       return unsub;
     } else {
+      console.log('[useDeals] localStorageモードで起動');
       setDeals(loadLocal());
       setLoading(false);
     }
