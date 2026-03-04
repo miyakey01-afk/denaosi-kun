@@ -40,7 +40,7 @@ const SUMMARY_COLS = [
   { label: '件数', w: 36 },
   { label: 'Pt計', w: 40 },
 ];
-const DEPT_COL_W = 72;
+const DEPT_COL_W = 96;
 const MIN_ROWS = 3;
 
 function fmt(date: Date): string {
@@ -213,6 +213,19 @@ export default function DepartmentCalendar({
           className="border-collapse text-[11px] leading-tight table-fixed"
           style={{ width: tableWidth }}
         >
+          {/* colgroup で各列の幅を明示的に定義 */}
+          <colgroup>
+            <col style={{ width: DEPT_COL_W }} />
+            {weekdays.map((day) => {
+              const ds = fmt(day);
+              return SUB_COL_SPECS.map((col, ci) => (
+                <col key={`${ds}-${ci}`} style={{ width: col.w }} />
+              ));
+            })}
+            {SUMMARY_COLS.map((col, i) => (
+              <col key={`sum-${i}`} style={{ width: col.w }} />
+            ))}
+          </colgroup>
           <thead className="sticky top-0 z-20">
             {/* Row 1: Day headers */}
             <tr>
@@ -302,7 +315,7 @@ export default function DepartmentCalendar({
                     <td
                       rowSpan={rc}
                       style={colStyle(DEPT_COL_W)}
-                      className={`border border-gray-300 px-2 py-1 text-xs font-bold text-center sticky left-0 z-10 whitespace-nowrap ${colors.header}`}
+                      className={`border border-gray-300 px-2 py-1 text-xs font-bold text-center sticky left-0 z-10 whitespace-nowrap overflow-hidden text-ellipsis ${colors.header}`}
                     >
                       {dept}
                     </td>

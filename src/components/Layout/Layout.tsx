@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import type { ViewMode } from '../../types';
-import Header from './Header';
 import TopBar from './TopBar';
 
 interface LayoutProps {
@@ -32,10 +31,10 @@ export default function Layout({
 }: LayoutProps) {
   return (
     <div className="h-screen flex flex-col bg-gray-100">
-      <Header onNewDeal={onNewDeal} />
       <TopBar
         currentView={currentView}
         onViewChange={onViewChange}
+        onNewDeal={onNewDeal}
         departments={departments}
         selectedDepartments={selectedDepartments}
         onDepartmentToggle={onDepartmentToggle}

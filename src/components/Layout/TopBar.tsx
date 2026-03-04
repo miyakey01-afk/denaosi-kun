@@ -5,6 +5,7 @@ import MiniCalendar from '../Calendar/MiniCalendar';
 interface TopBarProps {
   currentView: ViewMode;
   onViewChange: (view: ViewMode) => void;
+  onNewDeal: () => void;
   departments: string[];
   selectedDepartments: string[];
   onDepartmentToggle: (department: string) => void;
@@ -23,6 +24,7 @@ const NAV_ITEMS: { view: ViewMode; label: string; icon: string }[] = [
 export default function TopBar({
   currentView,
   onViewChange,
+  onNewDeal,
   departments,
   selectedDepartments,
   onDepartmentToggle,
@@ -41,7 +43,6 @@ export default function TopBar({
     selectedDepartments.length === 0 ||
     selectedDepartments.length === departments.length;
 
-  // Close calendar popover on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (calRef.current && !calRef.current.contains(e.target as Node)) {
@@ -52,7 +53,6 @@ export default function TopBar({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [calendarOpen]);
 
-  // Focus input when adding
   useEffect(() => {
     if (addingDept && inputRef.current) inputRef.current.focus();
   }, [addingDept]);
@@ -75,60 +75,74 @@ export default function TopBar({
   const dateLabel = `${selectedDate.getFullYear()}/${selectedDate.getMonth() + 1}/${selectedDate.getDate()}`;
 
   return (
-    <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 flex items-center gap-4 flex-wrap">
-      {/* Navigation tabs */}
-      <nav className="flex items-center gap-1">
-        {NAV_ITEMS.map(({ view, label, icon }) => (
+    <div className="bg-white border-b border-gray-200">
+      {/* Row 1: Title + Nav + Date + New Deal */}
+      <div className="px-4 py-2 flex items-center gap-4 flex-wrap">
+        {/* Title */}
+        <div className="flex items-center gap-2 mr-2">
+          <h1 className="text-lg font-bold text-gray-800 whitespace-nowrap">出直しくん</h1>
+          <span className="text-xs text-gray-400 hidden sm:inline whitespace-nowrap">営業パイプライン管理</span>
+        </div>
+
+        {/* Navigation tabs */}
+        <nav className="flex items-center gap-1">
+          {NAV_ITEMS.map(({ view, label, icon }) => (
+            <button
+              key={view}
+              onClick={() => onViewChange(view)}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                currentView === view
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <span className="text-xs">{icon}</span>
+              {label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Date picker */}
+        <div className="relative" ref={calRef}>
           <button
-            key={view}
-            onClick={() => onViewChange(view)}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              currentView === view
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
+            onClick={() => setCalendarOpen(!calendarOpen)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 border border-gray-300 bg-white"
           >
-            <span className="text-xs">{icon}</span>
-            {label}
+            <span className="text-xs">📅</span>
+            {dateLabel}
+            <span className="text-[10px] text-gray-400 ml-1">▼</span>
           </button>
-        ))}
-      </nav>
+          {calendarOpen && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-2 w-56">
+              <MiniCalendar
+                selectedDate={selectedDate}
+                onDateSelect={(date) => {
+                  onDateSelect(date);
+                  setCalendarOpen(false);
+                }}
+              />
+            </div>
+          )}
+        </div>
 
-      {/* Separator */}
-      <div className="h-6 w-px bg-gray-300" />
+        {/* Spacer */}
+        <div className="flex-1" />
 
-      {/* Date picker (popover) */}
-      <div className="relative" ref={calRef}>
+        {/* New Deal button */}
         <button
-          onClick={() => setCalendarOpen(!calendarOpen)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 border border-gray-300 bg-white"
+          onClick={onNewDeal}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
         >
-          <span className="text-xs">📅</span>
-          {dateLabel}
-          <span className="text-[10px] text-gray-400 ml-1">▼</span>
+          + 新規案件
         </button>
-        {calendarOpen && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-2 w-56">
-            <MiniCalendar
-              selectedDate={selectedDate}
-              onDateSelect={(date) => {
-                onDateSelect(date);
-                setCalendarOpen(false);
-              }}
-            />
-          </div>
-        )}
       </div>
 
-      {/* Separator */}
-      <div className="h-6 w-px bg-gray-300" />
-
-      {/* Department filter + management */}
-      <div className="flex items-center gap-1 flex-wrap">
+      {/* Row 2: Department filter */}
+      <div className="px-4 py-1.5 border-t border-gray-100 flex items-center gap-1 flex-wrap bg-gray-50">
         <span className="text-xs text-gray-500 font-semibold mr-1">所属:</span>
         <button
           onClick={onDepartmentSelectAll}
-          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+          className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
             allSelected
               ? 'bg-blue-100 text-blue-700 font-semibold'
               : 'text-gray-500 hover:bg-gray-100'
@@ -144,7 +158,7 @@ export default function TopBar({
             <span key={dept} className="relative group inline-flex">
               <button
                 onClick={() => onDepartmentToggle(dept)}
-                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                   isActive
                     ? 'bg-blue-100 text-blue-700 font-semibold'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -163,7 +177,6 @@ export default function TopBar({
           );
         })}
 
-        {/* Add department */}
         {addingDept ? (
           <form
             className="inline-flex items-center gap-1"
@@ -194,7 +207,7 @@ export default function TopBar({
         ) : (
           <button
             onClick={() => setAddingDept(true)}
-            className="px-2 py-1 rounded text-xs font-medium text-blue-600 hover:bg-blue-50 border border-dashed border-blue-300"
+            className="px-2 py-0.5 rounded text-xs font-medium text-blue-600 hover:bg-blue-50 border border-dashed border-blue-300"
             title="所属を追加"
           >
             + 追加
