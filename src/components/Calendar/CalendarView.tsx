@@ -6,7 +6,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import type { EventClickArg, EventDropArg, DateSelectArg, EventContentArg } from '@fullcalendar/core';
 import type { EventInput } from '@fullcalendar/core';
 import type { Deal } from '../../types';
-import { STATUS_LABELS, SETTLEMENT_LABELS } from '../../utils/constants';
+import { STATUS_LABELS, SETTLEMENT_LABELS, RESULT_LABELS } from '../../utils/constants';
 
 interface CalendarViewProps {
   events: EventInput[];
@@ -28,12 +28,15 @@ function renderEventContent(eventInfo: EventContentArg) {
       <div className="truncate opacity-80">
         {deal.property} | {deal.expectedPoints}pt
       </div>
-      <div className="flex gap-1 mt-0.5">
+      <div className="flex gap-1 mt-0.5 flex-wrap">
         <span className="bg-white/30 rounded px-1 text-[10px]">
           {STATUS_LABELS[deal.status]}
         </span>
         <span className="bg-white/30 rounded px-1 text-[10px]">
           {SETTLEMENT_LABELS[deal.settlement]}
+        </span>
+        <span className={`rounded px-1 text-[10px] ${deal.result === 'won' ? 'bg-white/60 font-bold' : 'bg-white/30'}`}>
+          {RESULT_LABELS[deal.result]}
         </span>
       </div>
     </div>

@@ -116,7 +116,7 @@ export default function Dashboard({ deals, departments, selectedDate, onDateChan
       r.totalPt += deal.expectedPoints;
       if (deal.result === 'won') { r.wonCount++; r.wonPt += deal.expectedPoints; }
       if (deal.result === 'lost') r.lostCount++;
-      if (deal.result === 'pending') r.pendingCount++;
+      if (deal.result === 'prospect') r.pendingCount++;
       const wi = classifyDealToWeek(deal.visitDate, weeks);
       if (wi >= 0) { r.weeks[wi].count++; r.weeks[wi].pt += deal.expectedPoints; }
     }
@@ -140,7 +140,7 @@ export default function Dashboard({ deals, departments, selectedDate, onDateChan
       r.totalPt += deal.expectedPoints;
       if (deal.result === 'won') { r.wonCount++; r.wonPt += deal.expectedPoints; }
       if (deal.result === 'lost') r.lostCount++;
-      if (deal.result === 'pending') r.pendingCount++;
+      if (deal.result === 'prospect') r.pendingCount++;
       const wi = classifyDealToWeek(deal.visitDate, weeks);
       if (wi >= 0) { r.weeks[wi].count++; r.weeks[wi].pt += deal.expectedPoints; }
     }
@@ -342,7 +342,7 @@ function SummaryTable({
               <th className="px-3 py-3 text-right font-medium text-gray-600 border-l border-gray-200" rowSpan={2}>受注</th>
               <th className="px-3 py-3 text-right font-medium text-gray-600" rowSpan={2}>受注Pt</th>
               <th className="px-3 py-3 text-right font-medium text-gray-600" rowSpan={2}>失注</th>
-              <th className="px-3 py-3 text-right font-medium text-gray-600" rowSpan={2}>未確定</th>
+              <th className="px-3 py-3 text-right font-medium text-gray-600" rowSpan={2}>見込</th>
               <th className="px-3 py-3 text-right font-medium text-gray-600" rowSpan={2}>受注率</th>
             </tr>
             <tr className="bg-gray-50 border-b">

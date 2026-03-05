@@ -332,6 +332,8 @@ export default function DepartmentCalendar({
                     const todayBg = isToday ? 'bg-blue-50/40' : '';
 
                     if (deal) {
+                      const isWon = deal.result === 'won';
+                      const wonBg = isWon ? 'bg-red-100 text-red-900 font-semibold' : '';
                       const values = [
                         deal.salesPerson,
                         deal.visitTime,
@@ -348,7 +350,7 @@ export default function DepartmentCalendar({
                             <td
                               key={ci}
                               style={colStyle(col.w)}
-                              className={`border border-gray-200 px-1.5 py-0.5 cursor-pointer hover:bg-white/60 ${todayBg} ${
+                              className={`border border-gray-200 px-1.5 py-0.5 cursor-pointer hover:bg-white/60 ${wonBg || todayBg} ${
                                 ci === 0 ? 'font-semibold cursor-grab' : ''
                               } ${ci === 4 ? 'text-right' : ''} ${
                                 col.wrap ? 'break-all' : 'whitespace-nowrap overflow-hidden text-ellipsis'
