@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import type { Office, StaffMember } from '../../types';
 import { useOffices } from '../../hooks/useOffices';
 
@@ -131,6 +132,79 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   );
 }
 
+/* ── Excel パース ── */
+
+interface ParsedExcelData {
+  staffMembers: StaffMember[];
+  departments: string[];
+}
+
+/**
+ * Excelファイルから課員データを解析する。
+ * ヘッダ行に「社員」「氏名」「課」を含む列を自動検出。
+ */
+function parseExcel(data: ArrayBuffer): ParsedExcelData {
+  const wb = XLSX.read(data, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+  if (rows.length === 0) return { staffMembers: [], departments: [] };
+
+  // ヘッダ行を探す: 「社員」「氏名」を含む行
+  let headerIdx = -1;
+  let colEmpId = -1;
+  let colName = -1;
+  let colDept = -1;
+
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    const row = rows[i];
+    if (!row) continue;
+    const cells = row.map((c) => String(c ?? '').trim());
+
+    for (let j = 0; j < cells.length; j++) {
+      const cell = cells[j];
+      if (/社員/.test(cell)) colEmpId = j;
+      if (/氏名/.test(cell)) colName = j;
+      if (/^課$/.test(cell)) colDept = j;
+    }
+
+    if (colEmpId >= 0 && colName >= 0) {
+      headerIdx = i;
+      break;
+    }
+  }
+
+  if (headerIdx < 0 || colName < 0) {
+    // ヘッダが見つからない場合: D=社員#, E=氏名, G=課 のフォールバック
+    colEmpId = 3;
+    colName = 4;
+    colDept = 6;
+    headerIdx = 0;
+  }
+
+  const staffMembers: StaffMember[] = [];
+  const deptSet = new Set<string>();
+
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row) continue;
+
+    const name = String(row[colName] ?? '').trim();
+    if (!name) continue;
+
+    const empId = Number(row[colEmpId]) || 0;
+    const dept = colDept >= 0 ? String(row[colDept] ?? '').trim() : '';
+
+    staffMembers.push({ employeeId: empId, name, department: dept });
+    if (dept) deptSet.add(dept);
+  }
+
+  return {
+    staffMembers,
+    departments: [...deptSet],
+  };
+}
+
 /* ── 営業所 編集/新規 フォーム ── */
 
 interface OfficeFormProps {
@@ -147,6 +221,41 @@ function OfficeForm({ initial, onSave, onCancel }: OfficeFormProps) {
     (initial?.staffMembers || []).map((s) => `${s.employeeId},${s.name},${s.department}`).join('\n'),
   );
   const [saving, setSaving] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadMsg('');
+
+    try {
+      const buf = await file.arrayBuffer();
+      const { staffMembers, departments } = parseExcel(buf);
+
+      if (staffMembers.length === 0) {
+        setUploadMsg('課員データが見つかりませんでした。列名を確認してください。');
+        return;
+      }
+
+      // テキストエリアに反映
+      setStaffText(
+        staffMembers.map((s) => `${s.employeeId},${s.name},${s.department}`).join('\n'),
+      );
+      if (departments.length > 0) {
+        setDeptText(departments.join('\n'));
+      }
+
+      setUploadMsg(`${staffMembers.length}名の課員、${departments.length}件の所属課を読み込みました`);
+    } catch (err) {
+      console.error('Excel parse error:', err);
+      setUploadMsg('Excelの読み込みに失敗しました。ファイル形式を確認してください。');
+    }
+
+    // ファイル入力をリセット（同じファイルを再選択可能にする）
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleSave = async () => {
     if (!name.trim() || !passcode.trim()) return;
@@ -195,6 +304,34 @@ function OfficeForm({ initial, onSave, onCancel }: OfficeFormProps) {
           />
         </div>
       </div>
+
+      {/* Excel アップロード */}
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-700">Excelから課員を一括登録</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              「社員#」「氏名」「課」列を含むExcelファイルをアップロード
+            </p>
+          </div>
+          <label className="cursor-pointer px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+            Excelを選択
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleExcelUpload}
+              className="hidden"
+            />
+          </label>
+        </div>
+        {uploadMsg && (
+          <p className={`text-xs mt-2 ${uploadMsg.includes('失敗') || uploadMsg.includes('見つかりません') ? 'text-red-600' : 'text-green-600'}`}>
+            {uploadMsg}
+          </p>
+        )}
+      </div>
+
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">
           所属課（1行に1つ）
