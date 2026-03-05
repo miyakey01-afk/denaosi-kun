@@ -1,20 +1,19 @@
 export type DealStatus =
   | 'first_visit'
-  | 'proposing'
-  | 'quote_submitted'
-  | 'negotiating'
-  | 'closing';
+  | 'revisit'
+  | 'follow_up'
+  | 'closing'
+  | 'prospect';
 
 export type Settlement =
-  | 'unsettled'
-  | 'in_progress'
-  | 'settled';
+  | 'has_settlement'
+  | 'no_settlement'
+  | 'unknown';
 
 export type DealResult =
-  | 'pending'
   | 'won'
   | 'lost'
-  | 'on_hold';
+  | 'prospect';
 
 export interface StaffMember {
   employeeId: number;

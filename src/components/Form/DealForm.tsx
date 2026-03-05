@@ -35,8 +35,8 @@ const EMPTY_FORM: DealFormData = {
   property: '',
   expectedPoints: '' as unknown as number,
   status: 'first_visit',
-  settlement: 'unsettled',
-  result: 'pending',
+  settlement: 'unknown',
+  result: 'prospect',
   memo: '',
 };
 

@@ -2,38 +2,36 @@ import type { DealStatus, Settlement, DealResult } from '../types';
 
 export const STATUS_COLORS: Record<DealStatus, string> = {
   first_visit: '#3B82F6',
-  proposing: '#EAB308',
-  quote_submitted: '#F97316',
-  negotiating: '#EF4444',
+  revisit: '#EAB308',
+  follow_up: '#F97316',
   closing: '#8B5CF6',
+  prospect: '#22C55E',
 };
 
 export const RESULT_COLORS: Record<DealResult, string> = {
-  pending: '#6B7280',
-  won: '#22C55E',
+  won: '#DC2626',
   lost: '#374151',
-  on_hold: '#F59E0B',
+  prospect: '#F59E0B',
 };
 
 export const STATUS_LABELS: Record<DealStatus, string> = {
   first_visit: '初回訪問',
-  proposing: '提案中',
-  quote_submitted: '見積提出',
-  negotiating: '交渉中',
+  revisit: '行直し',
+  follow_up: '出直し',
   closing: 'クロージング',
+  prospect: '見込中',
 };
 
 export const SETTLEMENT_LABELS: Record<Settlement, string> = {
-  unsettled: '未決済',
-  in_progress: '決済中',
-  settled: '決済済',
+  has_settlement: '決済あり',
+  no_settlement: '決済なし',
+  unknown: '不明',
 };
 
 export const RESULT_LABELS: Record<DealResult, string> = {
-  pending: '未確定',
   won: '受注',
   lost: '失注',
-  on_hold: '保留',
+  prospect: '見込',
 };
 
 export { STAFF_DEPARTMENTS as DEFAULT_DEPARTMENTS, STAFF_NAMES as DEFAULT_SALES_PERSONS } from '../data/staffMaster';

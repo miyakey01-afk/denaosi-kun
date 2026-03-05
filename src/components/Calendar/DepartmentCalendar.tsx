@@ -25,7 +25,7 @@ const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
  * 全角1文字 ≈ 11px, 半角1文字 ≈ 6px  + padding 12px(px-1.5×2)
  */
 const SUB_COL_SPECS = [
-  { label: '担当者', w: 56, wrap: false },  // 全角4文字
+  { label: '担当者', w: 72, wrap: true },   // 全角6文字
   { label: '時間',   w: 42, wrap: false },  // 半角5文字 (12:00)
   { label: '客先',   w: 144, wrap: true },  // 全角12文字
   { label: '物件',   w: 68, wrap: true },   // 全角5文字
@@ -207,8 +207,8 @@ export default function DepartmentCalendar({
         </p>
       </div>
 
-      {/* Spreadsheet — horizontal scroll */}
-      <div className="overflow-x-auto overflow-y-auto">
+      {/* Spreadsheet — horizontal & vertical scroll with sticky header */}
+      <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
         <table
           className="border-collapse text-[11px] leading-tight table-fixed"
           style={{ width: tableWidth }}
@@ -332,6 +332,8 @@ export default function DepartmentCalendar({
                     const todayBg = isToday ? 'bg-blue-50/40' : '';
 
                     if (deal) {
+                      const isWon = deal.result === 'won';
+                      const wonBg = isWon ? 'bg-red-100 text-red-900 font-semibold' : '';
                       const values = [
                         deal.salesPerson,
                         deal.visitTime,
@@ -348,7 +350,7 @@ export default function DepartmentCalendar({
                             <td
                               key={ci}
                               style={colStyle(col.w)}
-                              className={`border border-gray-200 px-1.5 py-0.5 cursor-pointer hover:bg-white/60 ${todayBg} ${
+                              className={`border border-gray-200 px-1.5 py-0.5 cursor-pointer hover:bg-white/60 ${wonBg || todayBg} ${
                                 ci === 0 ? 'font-semibold cursor-grab' : ''
                               } ${ci === 4 ? 'text-right' : ''} ${
                                 col.wrap ? 'break-all' : 'whitespace-nowrap overflow-hidden text-ellipsis'
