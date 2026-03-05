@@ -130,7 +130,7 @@ export default function App() {
       )}
 
       {currentView === 'dashboard' && (
-        <Dashboard deals={deals} selectedDate={selectedDate} onDateChange={handleDateSelect} />
+        <Dashboard deals={deals} departments={departments} selectedDate={selectedDate} onDateChange={handleDateSelect} />
       )}
 
       <DealFormModal
