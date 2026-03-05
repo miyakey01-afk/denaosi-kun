@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Deal } from '../../types';
 import { STATUS_LABELS, STATUS_COLORS } from '../../utils/constants';
 
 interface DashboardProps {
   deals: Deal[];
+  departments: string[];
   selectedDate: Date;
   onDateChange: (date: Date) => void;
 }
@@ -75,16 +76,21 @@ function classifyDealToWeek(visitDate: string, weeks: WeekRange[]): number {
   return -1;
 }
 
-export default function Dashboard({ deals, selectedDate, onDateChange }: DashboardProps) {
+export default function Dashboard({ deals, departments, selectedDate, onDateChange }: DashboardProps) {
   const monthLabel = `${selectedDate.getFullYear()}年${selectedDate.getMonth() + 1}月`;
+  const [activeDept, setActiveDept] = useState<string | null>(null); // null = すべて
 
   const weeks = useMemo(() => getWeeksOfMonth(selectedDate), [selectedDate]);
 
-  // 対象月のdealだけフィルタ
+  // 対象月のdealだけフィルタ（+ 所属タブフィルタ）
   const monthDeals = useMemo(() => {
     const ym = fmt(selectedDate);
-    return deals.filter((d) => d.visitDate.startsWith(ym));
-  }, [deals, selectedDate]);
+    let filtered = deals.filter((d) => d.visitDate.startsWith(ym));
+    if (activeDept) {
+      filtered = filtered.filter((d) => d.department === activeDept);
+    }
+    return filtered;
+  }, [deals, selectedDate, activeDept]);
 
   // 全体 KPI
   const totalCount = monthDeals.length;
@@ -185,6 +191,33 @@ export default function Dashboard({ deals, selectedDate, onDateChange }: Dashboa
         <h2 className="text-lg font-bold text-gray-800">{monthLabel}</h2>
         <button onClick={nextMonth} className="px-2 py-1 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded text-sm">次月 ▶</button>
         <button onClick={goThisMonth} className="px-3 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded border border-blue-200">今月</button>
+      </div>
+
+      {/* 所属タブ */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setActiveDept(null)}
+          className={`px-4 py-1.5 text-sm rounded-full font-medium transition-colors ${
+            activeDept === null
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          すべて
+        </button>
+        {departments.map((dept) => (
+          <button
+            key={dept}
+            onClick={() => setActiveDept(dept)}
+            className={`px-4 py-1.5 text-sm rounded-full font-medium transition-colors ${
+              activeDept === dept
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {dept}
+          </button>
+        ))}
       </div>
 
       {/* KPI Cards */}
