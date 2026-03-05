@@ -25,7 +25,7 @@ const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
  * 全角1文字 ≈ 11px, 半角1文字 ≈ 6px  + padding 12px(px-1.5×2)
  */
 const SUB_COL_SPECS = [
-  { label: '担当者', w: 56, wrap: false },  // 全角4文字
+  { label: '担当者', w: 72, wrap: true },   // 全角6文字
   { label: '時間',   w: 42, wrap: false },  // 半角5文字 (12:00)
   { label: '客先',   w: 144, wrap: true },  // 全角12文字
   { label: '物件',   w: 68, wrap: true },   // 全角5文字
@@ -207,8 +207,8 @@ export default function DepartmentCalendar({
         </p>
       </div>
 
-      {/* Spreadsheet — horizontal scroll */}
-      <div className="overflow-x-auto overflow-y-auto">
+      {/* Spreadsheet — horizontal & vertical scroll with sticky header */}
+      <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
         <table
           className="border-collapse text-[11px] leading-tight table-fixed"
           style={{ width: tableWidth }}
