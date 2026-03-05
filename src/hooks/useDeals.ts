@@ -9,6 +9,8 @@ import {
   serverTimestamp,
   getDocs,
   writeBatch,
+  query,
+  where,
 } from 'firebase/firestore';
 import { db, hasFirebaseConfig } from '../lib/firebase';
 import type { Deal, DealFormData } from '../types';
@@ -30,7 +32,7 @@ function saveLocal(deals: Deal[]) {
 }
 
 /** localStorage → Firestore 一括移行 */
-async function migrateLocalToFirestore(): Promise<number> {
+async function migrateLocalToFirestore(officeId: string): Promise<number> {
   if (!db) return 0;
   const localDeals = loadLocal();
   if (localDeals.length === 0) return 0;
@@ -42,7 +44,6 @@ async function migrateLocalToFirestore(): Promise<number> {
     return 0;
   }
 
-  // バッチ書き込み（500件制限を考慮して分割）
   let migrated = 0;
   const BATCH_SIZE = 400;
   for (let i = 0; i < localDeals.length; i += BATCH_SIZE) {
@@ -53,6 +54,7 @@ async function migrateLocalToFirestore(): Promise<number> {
       const ref = doc(collection(db, 'deals'));
       batch.set(ref, {
         ...data,
+        officeId: (deal as Deal).officeId || officeId,
         createdAt: deal.createdAt || serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -66,31 +68,61 @@ async function migrateLocalToFirestore(): Promise<number> {
   return migrated;
 }
 
-export function useDeals() {
+/** 既存dealに officeId が未設定のものを更新 */
+async function migrateOfficeId(officeId: string) {
+  if (!db) return;
+  const snap = await getDocs(collection(db, 'deals'));
+  const batch = writeBatch(db);
+  let count = 0;
+  for (const d of snap.docs) {
+    const data = d.data();
+    if (!data.officeId) {
+      batch.update(d.ref, { officeId });
+      count++;
+    }
+  }
+  if (count > 0) {
+    await batch.commit();
+    console.log(`[useDeals] ${count} 件の既存dealに officeId を付与しました`);
+  }
+}
+
+export function useDeals(officeId: string | null) {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const migrationAttempted = useRef(false);
 
-  // Firestore realtime listener or localStorage
   useEffect(() => {
-    console.log('[useDeals] hasFirebaseConfig:', hasFirebaseConfig, 'db:', !!db);
+    if (!officeId) {
+      setDeals([]);
+      setLoading(false);
+      return;
+    }
+
+    console.log('[useDeals] hasFirebaseConfig:', hasFirebaseConfig, 'db:', !!db, 'officeId:', officeId);
 
     if (hasFirebaseConfig && db) {
-      // 初回のみ: localStorage → Firestore 移行を試行
       const alreadyMigrated = localStorage.getItem(MIGRATED_KEY) === 'true';
-      console.log('[useDeals] 移行済み:', alreadyMigrated, '移行試行済み:', migrationAttempted.current);
 
-      if (!migrationAttempted.current && !alreadyMigrated) {
+      if (!migrationAttempted.current) {
         migrationAttempted.current = true;
-        migrateLocalToFirestore().then((count) => {
-          console.log(`[useDeals] 移行結果: ${count} 件`);
-        }).catch((err) => {
-          console.error('[useDeals] Firestore 移行エラー:', err);
-        });
+
+        if (!alreadyMigrated) {
+          migrateLocalToFirestore(officeId)
+            .then((count) => console.log(`[useDeals] 移行結果: ${count} 件`))
+            .catch((err) => console.error('[useDeals] Firestore 移行エラー:', err));
+        }
+
+        // officeId 未設定の既存データを移行
+        migrateOfficeId(officeId).catch((err) =>
+          console.error('[useDeals] officeId 移行エラー:', err),
+        );
       }
 
+      // officeId でフィルタしたリアルタイムリスナー
+      const q = query(collection(db, 'deals'), where('officeId', '==', officeId));
       const unsub = onSnapshot(
-        collection(db, 'deals'),
+        q,
         (snapshot) => {
           console.log('[useDeals] onSnapshot: ドキュメント数 =', snapshot.docs.length);
           const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Deal));
@@ -108,7 +140,7 @@ export function useDeals() {
       setDeals(loadLocal());
       setLoading(false);
     }
-  }, []);
+  }, [officeId]);
 
   const addDeal = useCallback(async (formData: DealFormData) => {
     const now = nowISO();
@@ -116,6 +148,7 @@ export function useDeals() {
       try {
         await addDoc(collection(db, 'deals'), {
           ...formData,
+          officeId: officeId || '',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
@@ -126,6 +159,7 @@ export function useDeals() {
     } else {
       const newDeal: Deal = {
         ...formData,
+        officeId: officeId || 'local',
         id: generateId(),
         createdAt: now,
         updatedAt: now,
@@ -136,7 +170,7 @@ export function useDeals() {
         return next;
       });
     }
-  }, []);
+  }, [officeId]);
 
   const updateDeal = useCallback(async (id: string, updates: Partial<DealFormData>) => {
     if (hasFirebaseConfig && db) {

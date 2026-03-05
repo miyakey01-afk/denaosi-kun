@@ -13,6 +13,8 @@ interface LayoutProps {
   onDepartmentsUpdate: (list: string[]) => void;
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
+  officeName?: string;
+  onLogout?: () => void;
   children: ReactNode;
 }
 
@@ -27,6 +29,8 @@ export default function Layout({
   onDepartmentsUpdate,
   selectedDate,
   onDateSelect,
+  officeName,
+  onLogout,
   children,
 }: LayoutProps) {
   return (
@@ -42,6 +46,8 @@ export default function Layout({
         onDepartmentsUpdate={onDepartmentsUpdate}
         selectedDate={selectedDate}
         onDateSelect={onDateSelect}
+        officeName={officeName}
+        onLogout={onLogout}
       />
       <main className="flex-1 p-4 overflow-auto min-h-0">
         {children}

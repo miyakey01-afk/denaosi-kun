@@ -6,6 +6,7 @@ const mm = String(today.getMonth() + 1).padStart(2, '0');
 
 export const SAMPLE_DEALS: Deal[] = [
   {
+    officeId: 'local',
     id: 'sample-1',
     salesPerson: '田中太郎',
     department: '営業1課',
@@ -22,6 +23,7 @@ export const SAMPLE_DEALS: Deal[] = [
     updatedAt: new Date().toISOString(),
   },
   {
+    officeId: 'local',
     id: 'sample-2',
     salesPerson: '山田花子',
     department: '営業2課',
@@ -38,6 +40,7 @@ export const SAMPLE_DEALS: Deal[] = [
     updatedAt: new Date().toISOString(),
   },
   {
+    officeId: 'local',
     id: 'sample-3',
     salesPerson: '佐藤次郎',
     department: '東京支店',
@@ -54,6 +57,7 @@ export const SAMPLE_DEALS: Deal[] = [
     updatedAt: new Date().toISOString(),
   },
   {
+    officeId: 'local',
     id: 'sample-4',
     salesPerson: '田中太郎',
     department: '営業1課',
@@ -70,6 +74,7 @@ export const SAMPLE_DEALS: Deal[] = [
     updatedAt: new Date().toISOString(),
   },
   {
+    officeId: 'local',
     id: 'sample-5',
     salesPerson: '山田花子',
     department: '営業2課',

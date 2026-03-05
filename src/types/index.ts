@@ -22,8 +22,17 @@ export interface StaffMember {
   department: string;
 }
 
+export interface Office {
+  id: string;
+  name: string;
+  passcode: string;
+  departments: string[];
+  staffMembers: StaffMember[];
+}
+
 export interface Deal {
   id: string;
+  officeId: string;
   salesPerson: string;
   department: string;
   customerName: string;
@@ -39,6 +48,6 @@ export interface Deal {
   updatedAt: string;
 }
 
-export type DealFormData = Omit<Deal, 'id' | 'createdAt' | 'updatedAt'>;
+export type DealFormData = Omit<Deal, 'id' | 'createdAt' | 'updatedAt' | 'officeId'>;
 
 export type ViewMode = 'calendar' | 'list' | 'dashboard';
