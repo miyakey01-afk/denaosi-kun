@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { Deal, DealFormData, ViewMode } from './types';
+import { useOfficeAuth } from './hooks/useOfficeAuth';
 import { useDeals } from './hooks/useDeals';
 import { useMasterData } from './hooks/useMasterData';
 import Layout from './components/Layout/Layout';
@@ -7,10 +8,13 @@ import DepartmentCalendar from './components/Calendar/DepartmentCalendar';
 import DealList from './components/List/DealList';
 import Dashboard from './components/Dashboard/Dashboard';
 import DealFormModal from './components/Form/DealFormModal';
+import PasscodePage from './components/Auth/PasscodePage';
+import AdminPage from './components/Admin/AdminPage';
 
 export default function App() {
-  const { deals, loading, addDeal, updateDeal, deleteDeal } = useDeals();
-  const { departments, salesPersons, staffMembers, updateDepartments } = useMasterData();
+  const auth = useOfficeAuth();
+  const { deals, loading, addDeal, updateDeal, deleteDeal } = useDeals(auth.officeId);
+  const { departments, salesPersons, staffMembers, updateDepartments } = useMasterData(auth.office);
 
   const [currentView, setCurrentView] = useState<ViewMode>('calendar');
   const [modalOpen, setModalOpen] = useState(false);
@@ -19,7 +23,6 @@ export default function App() {
   const [presetTime, setPresetTime] = useState<string>('');
   const [presetDepartment, setPresetDepartment] = useState<string>('');
 
-  // Department filter & date selection
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
 
@@ -66,15 +69,8 @@ export default function App() {
 
   const handleDepartmentToggle = useCallback((dept: string) => {
     setSelectedDepartments((prev) => {
-      if (prev.length === 0) {
-        // Currently showing all -> select only this one
-        return [dept];
-      }
-      if (prev.includes(dept)) {
-        // Deselect
-        return prev.filter((d) => d !== dept);
-      }
-      // Add to selection
+      if (prev.length === 0) return [dept];
+      if (prev.includes(dept)) return prev.filter((d) => d !== dept);
       return [...prev, dept];
     });
   }, []);
@@ -87,6 +83,26 @@ export default function App() {
     setSelectedDate(date);
   }, []);
 
+  // Loading state
+  if (auth.loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-gray-500">読み込み中...</div>
+      </div>
+    );
+  }
+
+  // Admin mode
+  if (auth.isAdmin) {
+    return <AdminPage onLogout={auth.logout} />;
+  }
+
+  // Not authenticated
+  if (!auth.officeId) {
+    return <PasscodePage error={auth.error} onLogin={auth.login} />;
+  }
+
+  // Data loading
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-100">
@@ -107,6 +123,8 @@ export default function App() {
       onDepartmentsUpdate={updateDepartments}
       selectedDate={selectedDate}
       onDateSelect={handleDateSelect}
+      officeName={auth.office?.name}
+      onLogout={auth.logout}
     >
       {currentView === 'calendar' && (
         <DepartmentCalendar

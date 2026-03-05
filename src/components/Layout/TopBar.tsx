@@ -13,6 +13,8 @@ interface TopBarProps {
   onDepartmentsUpdate: (list: string[]) => void;
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
+  officeName?: string;
+  onLogout?: () => void;
 }
 
 const NAV_ITEMS: { view: ViewMode; label: string; icon: string }[] = [
@@ -32,6 +34,8 @@ export default function TopBar({
   onDepartmentsUpdate,
   selectedDate,
   onDateSelect,
+  officeName,
+  onLogout,
 }: TopBarProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [addingDept, setAddingDept] = useState(false);
@@ -128,6 +132,13 @@ export default function TopBar({
         {/* Spacer */}
         <div className="flex-1" />
 
+        {/* Office name */}
+        {officeName && (
+          <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+            {officeName}
+          </span>
+        )}
+
         {/* New Deal button */}
         <button
           onClick={onNewDeal}
@@ -135,6 +146,16 @@ export default function TopBar({
         >
           + 新規案件
         </button>
+
+        {/* Logout button */}
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
+          >
+            ログアウト
+          </button>
+        )}
       </div>
 
       {/* Row 2: Department filter */}
